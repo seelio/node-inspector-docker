@@ -1,0 +1,88 @@
+---
+# ----------------------------------------------------------
+# The node-inspector source needs to be available to the container
+# being debugged. There are a few files that need to exist in
+# order for the node process to start taking debug requests
+# from node-inspector.
+# ----------------------------------------------------------
+# This creates a data volume container that can provide those
+# files to the node-app
+node-inspector-source:
+  image: seelio/node-inspector:latest
+
+node-app:
+  container_name: node-app
+  build: ./node-app
+  # ----------------------------------------------------------
+  # Since this is only going to be used in development,
+  # sharing a volume with the host is assumed.
+  volumes:
+    - ./node-app:/opt/node-app
+  # ----------------------------------------------------------
+  # Grab the node-inspector source code from the container
+  # above
+  volumes_from:
+    - node-inspector-source
+  # ----------------------------------------------------------
+  # Run node with the --debug flag so that debugging is enabled
+  command: node --debug index.js
+  ports:
+    # ----------------------------------------------------------
+    # Open the app port
+    - 3000:3000
+    # ----------------------------------------------------------
+    # Open the port that node-inspector will listen on
+    # This is done here instead of below because the node-
+    # inspector container uses --net=container mode
+    - 8080:8080
+
+node-app-inspector-instance:
+  container_name: node-inspector-node-app
+  # ----------------------------------------------------------
+  # Use the image from the build.sh script
+  image: seelio/node-inspector:latest
+  # ----------------------------------------------------------
+  # Share a network with the node-app container.
+  # This is the only way to get the node-app process
+  # to take debug requests from node inspector, since it
+  # onlye listens on localhost/127.0.0.1, and doesn't like it when you
+  # try to map ports through docker ports.
+  net: "container:node-app"
+  # ----------------------------------------------------------
+  # Grab volumes from the node-app container.
+  # This makes pulling source maps, etc from the
+  # node app container possible.
+  # ----------------------------------------------------------
+  # It's also important that the node-inspector files be
+  # present at the same location in both the node-app and this
+  # node-inspector container.
+  volumes_from:
+    - node-app
+
+# ----------------------------------------------------------
+# An example using a coffeescript app
+# You can use the same node-inspector-source container
+# to power multiple node-inspector container instances.
+
+coffee-app:
+  container_name: coffee-app
+  build: ./coffee-app
+  volumes:
+    - ./coffee-app:/opt/coffee-app
+  # ----------------------------------------------------------
+  # Same volumes mounted from node-inspector-source container
+  volumes_from:
+    - node-inspector-source
+  command: node --debug index.js
+  # ----------------------------------------------------------
+  # Ports are mapped differently from above.
+  ports:
+    - 3001:3000
+    - 8081:8080
+
+coffee-app-inspector-instance:
+  container_name: node-inspector-coffee-app
+  image: seelio/node-inspector:latest
+  net: "container:coffee-app"
+  volumes_from:
+    - coffee-app

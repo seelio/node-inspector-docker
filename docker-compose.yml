@@ -47,7 +47,7 @@ node-app-inspector-instance:
   # to take debug requests from node inspector, since it
   # onlye listens on localhost/127.0.0.1, and doesn't like it when you
   # try to map ports through docker ports.
-  net: "container:node-app"
+  network_mode: "container:node-app"
   # ----------------------------------------------------------
   # Grab volumes from the node-app container.
   # This makes pulling source maps, etc from the
@@ -83,6 +83,6 @@ coffee-app:
 coffee-app-inspector-instance:
   container_name: node-inspector-coffee-app
   image: seelio/node-inspector:latest
-  net: "container:coffee-app"
+  network_mode: "container:coffee-app"
   volumes_from:
     - coffee-app
